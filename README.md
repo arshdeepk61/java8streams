@@ -16,6 +16,7 @@ Your original list is never changed.
 | [GLOSSARY.md](GLOSSARY.md) | Plain-English definitions of every stream term (stream, lazy, collector, predicate, parallel…). Look up any confusing word. |
 | [QUESTIONS.md](QUESTIONS.md) | 40 practice questions + answers (easy → hard, includes parallel streams), plus interview theory. |
 | [PROBLEMS.md](PROBLEMS.md) | 15 **real-world** coding problems (employees, orders, logs, transactions) with full solutions. |
+| [INTERVIEW.md](INTERVIEW.md) | The most commonly asked **interview questions** — theory, whiteboard coding, and "spot the bug" — with short model answers. |
 | [StreamsExamples.java](src/main/java/org/example/StreamsExamples.java) | Runnable Java code — see every example print its output. |
 | [RealWorldProblems.java](src/main/java/org/example/RealWorldProblems.java) | Runnable solutions for every problem in PROBLEMS.md. |
 
