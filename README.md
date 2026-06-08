@@ -13,6 +13,7 @@ Your original list is never changed.
 |------|------------|
 | [CHEATSHEET.md](CHEATSHEET.md) | The full cheat sheet — every operation explained simply with examples. **Start here.** |
 | [DIAGRAMS.md](DIAGRAMS.md) | Visual diagrams — the conveyor-belt picture, filter vs map, groupingBy, parallel, and more. Great if you learn by seeing. |
+| [GLOSSARY.md](GLOSSARY.md) | Plain-English definitions of every stream term (stream, lazy, collector, predicate, parallel…). Look up any confusing word. |
 | [QUESTIONS.md](QUESTIONS.md) | 40 practice questions + answers (easy → hard, includes parallel streams), plus interview theory. |
 | [PROBLEMS.md](PROBLEMS.md) | 15 **real-world** coding problems (employees, orders, logs, transactions) with full solutions. |
 | [StreamsExamples.java](src/main/java/org/example/StreamsExamples.java) | Runnable Java code — see every example print its output. |
