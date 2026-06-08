@@ -103,5 +103,34 @@ public class StreamsExamples {
                 .skip(1)
                 .findFirst()
                 .ifPresent(n -> System.out.println("second highest = " + n));
+
+        System.out.println("\n=== 17. parallel stream: sum 1..1,000,000 ===");
+        long parallelSum = LongStream.rangeClosed(1, 1_000_000)
+                .parallel()
+                .sum();
+        System.out.println("parallel sum = " + parallelSum);
+
+        System.out.println("\n=== 18. parallel speed test (heavy task) ===");
+        long n = 50_000_000L;
+        long t1 = System.currentTimeMillis();
+        long seq = LongStream.rangeClosed(1, n).filter(x -> x % 2 == 0).sum();
+        long t2 = System.currentTimeMillis();
+        long par = LongStream.rangeClosed(1, n).parallel().filter(x -> x % 2 == 0).sum();
+        long t3 = System.currentTimeMillis();
+        System.out.println("result match: " + (seq == par));
+        System.out.println("sequential: " + (t2 - t1) + " ms, parallel: " + (t3 - t2) + " ms");
+
+        System.out.println("\n=== 19. parallel-safe grouping (groupingByConcurrent) ===");
+        Map<String, List<String>> byCityNames = people.parallelStream()
+                .collect(Collectors.groupingByConcurrent(
+                        Person::city,
+                        Collectors.mapping(Person::name, Collectors.toList())));
+        System.out.println(byCityNames);
+
+        System.out.println("\n=== 20. WRONG vs RIGHT: counting in parallel ===");
+        // WRONG: shared mutable counter -> race condition, total too low
+        // RIGHT: let the stream count
+        long safeCount = nums.parallelStream().filter(x -> x % 2 == 0).count();
+        System.out.println("safe even count = " + safeCount);
     }
 }

@@ -201,7 +201,39 @@ Map<String, Double> avgByCity = people.stream()
 
 ---
 
-## 11. Common mistakes (avoid these!)
+## 11. Parallel streams (use MANY CPU cores at once)
+
+Normal stream = **one** worker, item by item.
+Parallel stream = data is **split** across many CPU cores, then results are **joined**.
+
+```java
+list.parallelStream()...          // parallel from the start
+list.stream().parallel()...       // switch a normal stream to parallel
+LongStream.rangeClosed(1, 1_000_000).parallel().sum();
+```
+
+**Use parallel ONLY when ALL are true:**
+1. **Large** data (thousands+ items).
+2. **Heavy** CPU work per item.
+3. Operations are **stateless** + **associative** (`+`, `*`, `max` — order doesn't matter).
+4. Source **splits easily** (array, `ArrayList`, range — NOT `LinkedList`).
+5. **No blocking I/O** (no DB/network/file calls inside).
+6. You **measured** it and it's actually faster.
+
+> If unsure → stay **sequential**. For small lists, parallel is usually *slower*.
+
+**Parallel traps to avoid:**
+| Trap | Why it breaks | Fix |
+|------|---------------|-----|
+| Adding to a shared `ArrayList` in `forEach` | not thread-safe → corrupt data | use `.collect(...)` |
+| Shared counter `count[0]++` | race condition → wrong total | use `.count()` / `LongAdder` |
+| `groupingBy` in parallel | slow merging | use `groupingByConcurrent` |
+| Need order but use `forEach` | order not guaranteed | use `forEachOrdered` |
+| Blocking I/O inside | starves the shared ForkJoinPool | keep it CPU-only |
+
+---
+
+## 12. Common mistakes (avoid these!)
 
 1. **Reusing a stream** — a stream is single-use. After a terminal step it's dead.
    ```java
@@ -215,6 +247,6 @@ Map<String, Double> avgByCity = people.stream()
 
 ---
 
-## 12. The one-line summary
+## 13. The one-line summary
 
 > `source.stream()` → middle steps that **filter** and **map** → a terminal step that **collects** the answer. Original data stays untouched.

@@ -319,6 +319,197 @@ int parisAge = people.stream()
 
 ---
 
+## Part G — Parallel Streams (Advanced) 🔴🔴
+
+> **What is a parallel stream?** A normal stream does the work on **one** worker
+> (one CPU thread), one item after another. A **parallel** stream splits the data
+> into chunks and uses **many** workers at the same time, then joins the results.
+>
+> You turn it on by adding **`.parallel()`** or starting with **`.parallelStream()`**.
+>
+> ```java
+> list.parallelStream()...        // parallel from the start
+> list.stream().parallel()...     // switch a normal stream to parallel
+> ```
+>
+> **Golden rule:** Parallel is only worth it for **big data + heavy work**.
+> For small lists it is usually *slower* (splitting/joining costs more than it saves).
+> And your operations must be **stateless** and **not depend on order**, or you get bugs.
+
+### Q29. 🟢 Turn a normal stream into a parallel one and sum 1..1,000,000.
+<details><summary>Show Answer</summary>
+
+```java
+long sum = LongStream.rangeClosed(1, 1_000_000)
+        .parallel()
+        .sum();   // splitting works perfectly because + can be done in any order
+```
+</details>
+
+### Q30. Why is this code BROKEN in parallel? Fix it.
+```java
+List<Integer> result = new ArrayList<>();
+nums.parallelStream().forEach(result::add);   // <-- danger
+```
+<details><summary>Show Answer</summary>
+
+**Problem:** `ArrayList` is **not thread-safe**. Many threads call `add()` at the
+same time → you can get a corrupted list, missing items, or an exception. This is a
+**race condition**.
+
+**Fix — never add into a shared mutable list yourself. Let `collect` do it:**
+```java
+List<Integer> result = nums.parallelStream()
+        .collect(Collectors.toList());   // collect is built to be parallel-safe
+```
+> Lesson: avoid **side effects** (modifying outside variables) inside streams,
+> especially parallel ones. Use `collect`/`reduce` instead.
+</details>
+
+### Q31. Why might `forEach` print numbers out of order in parallel, and what fixes it?
+<details><summary>Show Answer</summary>
+
+`forEach` in parallel runs on many threads, so output order is **not guaranteed**.
+If you need the original order, use **`forEachOrdered`**:
+```java
+nums.parallelStream().forEachOrdered(System.out::println);  // keeps order
+```
+> Trade-off: keeping order removes some of the speed benefit.
+</details>
+
+### Q32. 🔴 What's wrong with this parallel reduce, and how do you reduce correctly?
+```java
+int sum = nums.parallelStream().reduce(0, (a, b) -> a + b);   // this one is fine
+String joined = words.parallelStream().reduce("", (a, b) -> a + b); // why slow/risky?
+```
+<details><summary>Show Answer</summary>
+
+The number `reduce` is **fine** — `+` is *associative* (grouping doesn't matter),
+which is exactly what parallel reduce needs.
+
+For strings, `(a, b) -> a + b` works but is **inefficient** in parallel because it
+creates lots of intermediate strings. Use the **3-argument reduce** (with a combiner)
+or, better, a `Collector`:
+```java
+String joined = words.parallelStream()
+        .collect(Collectors.joining());   // efficient + parallel-safe
+```
+> Rule: parallel `reduce` needs an **identity** (like `0` or `""`) and an
+> **associative** operation. `+` and `*` qualify; subtraction does NOT.
+</details>
+
+### Q33. 🔴 Why is `subtraction` unsafe as a parallel reduce operation?
+<details><summary>Show Answer</summary>
+
+Parallel reduce may group items differently, e.g. `(a - b) - c` vs `a - (b - c)`.
+Subtraction is **not associative**, so different groupings give **different answers**.
+Result becomes unpredictable. Only use **associative** operations (`+`, `*`, `max`,
+`min`, string concatenation) in parallel reduce.
+</details>
+
+### Q34. 🔴🔴 Measure the speed difference: sequential vs parallel for a heavy task.
+<details><summary>Show Answer</summary>
+
+```java
+long n = 50_000_000L;
+
+long t1 = System.currentTimeMillis();
+long seq = LongStream.rangeClosed(1, n).filter(x -> x % 2 == 0).sum();
+long t2 = System.currentTimeMillis();
+long par = LongStream.rangeClosed(1, n).parallel().filter(x -> x % 2 == 0).sum();
+long t3 = System.currentTimeMillis();
+
+System.out.println("sequential: " + (t2 - t1) + " ms");
+System.out.println("parallel:   " + (t3 - t2) + " ms");
+```
+> On a multi-core machine the parallel version is usually faster for large `n`.
+> For a tiny list it would be **slower** — always measure, don't assume.
+</details>
+
+### Q35. 🔴 Which data sources split well (good for parallel) and which don't?
+<details><summary>Show Answer</summary>
+
+- **Good (split cheaply):** arrays, `ArrayList`, `IntStream.range`, `HashSet`.
+  They know their size and can be cut in half instantly.
+- **Bad (split poorly):** `LinkedList`, streams from `iterator`, `Stream.iterate`,
+  I/O sources. They must be walked one-by-one, so splitting gives little benefit.
+
+> Pick parallel when the source is **easily splittable** and the work per item is heavy.
+</details>
+
+### Q36. 🔴🔴 What thread pool do parallel streams use, and why does that matter?
+<details><summary>Show Answer</summary>
+
+By default ALL parallel streams in your app share **one** pool: the
+**common ForkJoinPool** (size = number of CPU cores − 1). That means a slow
+**blocking** task (like a network/database call) inside a parallel stream can
+**starve** every other parallel stream in the app.
+
+> Lesson: **don't put blocking I/O inside parallel streams.** Keep them for
+> CPU-heavy, in-memory work. (Advanced: you can run a stream inside your own
+> `ForkJoinPool` to isolate it, but prefer not to block at all.)
+</details>
+
+### Q37. 🔴 Will `findFirst()` and `findAny()` behave differently in parallel? Why?
+<details><summary>Show Answer</summary>
+
+- `findFirst()` always returns the **first by order** — even in parallel, so it may
+  do extra coordination to honour order.
+- `findAny()` returns **whichever** matching item any thread finds first — faster in
+  parallel because it doesn't care about order.
+
+> If you don't need *the first* specifically, prefer `findAny()` in parallel.
+</details>
+
+### Q38. 🔴🔴 Group a large list by city in parallel, safely and efficiently.
+<details><summary>Show Answer</summary>
+
+```java
+Map<String, List<Person>> byCity = people.parallelStream()
+        .collect(Collectors.groupingByConcurrent(Person::city));
+```
+> Use **`groupingByConcurrent`** (not plain `groupingBy`) for parallel grouping —
+> it uses a thread-safe `ConcurrentHashMap` and avoids merging overhead.
+> Note: the order inside each group is no longer guaranteed.
+</details>
+
+### Q39. 🔴 Spot the bug: a counter that gives the wrong total in parallel.
+```java
+int[] count = {0};
+nums.parallelStream().forEach(n -> count[0]++);   // wrong total!
+```
+<details><summary>Show Answer</summary>
+
+`count[0]++` is **not atomic** (it's read → add → write). Multiple threads overwrite
+each other → the final count is too low. Don't share a mutable counter.
+
+**Fix — use the stream's own counting:**
+```java
+long count = nums.parallelStream().count();
+```
+Or, if you truly must count manually, use an atomic type:
+```java
+LongAdder count = new LongAdder();
+nums.parallelStream().forEach(n -> count.increment());
+```
+</details>
+
+### Q40. 🔴🔆 Checklist: when SHOULD you use a parallel stream? (theory)
+<details><summary>Show Answer</summary>
+
+Use parallel **only when ALL of these are true**:
+1. **Large** dataset (thousands+ of elements).
+2. **Heavy** work per element (CPU-bound math/processing), not trivial work.
+3. Operations are **stateless** and **associative** (order doesn't change the result).
+4. Source is **easily splittable** (array, ArrayList, range).
+5. **No blocking I/O** (no DB/network/file calls inside).
+6. You actually **measured** it and it's faster.
+
+If any are false → use a normal (sequential) stream. When unsure, **stay sequential**.
+</details>
+
+---
+
 ## Bonus interview theory questions (explain in words)
 
 1. **What is a stream?** A pipeline that processes a sequence of data with operations like filter/map, without changing the original source.
@@ -329,3 +520,7 @@ int parisAge = people.stream()
 6. **What is Optional?** A container that may or may not hold a value, used to avoid `null` errors.
 7. **map vs flatMap?** `map` = one item → one item. `flatMap` = one item → many items, then flattened into a single stream.
 8. **Stream vs Collection?** A Collection *stores* data; a Stream *processes* data and holds nothing.
+9. **Sequential vs parallel stream?** Sequential uses one thread, item by item. Parallel splits the data across many CPU cores at once, then joins results — faster only for large data + heavy work.
+10. **Is parallel always faster?** No. For small lists or light work the splitting/joining overhead makes it *slower*. Always measure.
+11. **What pool do parallel streams use?** The shared common ForkJoinPool (cores − 1). Blocking I/O inside one can starve all others — keep parallel streams CPU-bound.
+12. **What must operations be for safe parallel reduce?** *Stateless*, *non-interfering*, and *associative* (e.g. `+`, `*`, `max`) so different groupings give the same answer.
