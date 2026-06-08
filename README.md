@@ -12,8 +12,10 @@ Your original list is never changed.
 | File | What it is |
 |------|------------|
 | [CHEATSHEET.md](CHEATSHEET.md) | The full cheat sheet — every operation explained simply with examples. **Start here.** |
-| [QUESTIONS.md](QUESTIONS.md) | 28 practice questions + answers (easy → hard), plus interview theory. |
+| [QUESTIONS.md](QUESTIONS.md) | 40 practice questions + answers (easy → hard, includes parallel streams), plus interview theory. |
+| [PROBLEMS.md](PROBLEMS.md) | 15 **real-world** coding problems (employees, orders, logs, transactions) with full solutions. |
 | [StreamsExamples.java](src/main/java/org/example/StreamsExamples.java) | Runnable Java code — see every example print its output. |
+| [RealWorldProblems.java](src/main/java/org/example/RealWorldProblems.java) | Runnable solutions for every problem in PROBLEMS.md. |
 
 ## How to study (suggested order)
 1. Read **CHEATSHEET.md** top to bottom (15 min).
